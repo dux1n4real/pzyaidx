@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>pzyaidx · 活动官方平台</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { height: 100%; overflow: hidden; }
+    body { font-family: 'Noto Serif SC', serif; background: #f0f2f5; }
+
+    @keyframes fadeUp   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+    @keyframes spin     { to{transform:rotate(360deg)} }
+    @keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:.4} }
+    @keyframes bounce   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+    @keyframes shake    { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
+    @keyframes confetti { 0%{transform:translateY(-10px) rotate(0deg);opacity:1} 100%{transform:translateY(110vh) rotate(720deg);opacity:0} }
+    @keyframes popIn    { 0%{opacity:0;transform:scale(.5) translateY(10px)} 60%{transform:scale(1.08)} 100%{opacity:1;transform:scale(1) translateY(0)} }
+    @keyframes glow     { 0%,100%{box-shadow:0 0 20px rgba(255,107,53,.3)} 50%{box-shadow:0 0 40px rgba(255,107,53,.7)} }
+    @keyframes waveIn    { 0%{opacity:0;transform:translateX(-20px)} 100%{opacity:1;transform:translateX(0)} }
+    @keyframes drawPath  { from{stroke-dashoffset:420} to{stroke-dashoffset:0} }
+    @keyframes cityPulse { 0%,100%{r:8} 50%{r:12} }
+
+    .wrapped-page {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      overflow: hidden; user-select: none;
+    }
+    .official-page {
+      min-height: 100dvh; overflow-y: auto; background: #f0f2f5;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px 20px;
+    }
+    .card {
+      background: #fff; border-radius: 4px; padding: 32px 28px;
+      width: 100%; max-width: 400px;
+      box-shadow: 0 2px 16px rgba(0,0,0,.1); border: 1px solid #e5e5e5;
+    }
+    input:focus { outline: none; border-color: #1A237E !important; }
+    button { font-family: 'Noto Serif SC', serif; cursor: pointer; }
+
+    .nav-btn {
+      position: absolute; bottom: 28px; z-index: 20;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+      color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background .2s;
+      backdrop-filter: blur(8px);
+    }
+    .nav-btn:hover { background: rgba(255,255,255,.22); }
+    .nav-btn:active { transform: scale(.93); }
+    .nav-btn.left  { left: 24px; }
+    .nav-btn.right { right: 24px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
+const EVENTS = [
+  {
+    date: '2023.08.01', icon: '💘', title: '关系状态变更通知', tag: '不可撤销',
+    desc: '经本系统严格核实，用户"毛利头子女士"与用户"杜鑫"于本日正式确立恋爱关系。本记录已永久写入数据库，不可撤销、不可删除、不可反悔。违者将被追究法律责任。',
+  },
+  {
+    date: '2023.08.31 — 09.04', icon: '🏔️', title: '青海五日联合出行档案', tag: '典型案例',
+    desc: '路线：兰州（落地，品当地美食）→ 西宁 → 橡皮山 → 茶卡盐湖 → 青海湖（系统评定：本次出行最高光时刻）→ 祁连镇。\n\n⚠️ 特别标注：祁连镇某夜，用户"毛利头子女士"突发急性肠胃炎，用户"杜鑫"深夜2点陪同赴急诊。系统认证：满分级别陪伴，此事已作为关系高质量凭证永久归档。',
+  },
+  {
+    date: '2025年6月', icon: '🎓', title: '双方用户硕士毕业', tag: '里程碑',
+    desc: '双方用户同期完成硕士学位，正式结束硕士阶段。\n\n系统观察：学业已毕业，感情未毕业。\n\n经本系统综合评估，此段关系的绩点：4.0 / 4.0（满绩）。',
+  },
+  {
+    date: '2025年10—11月', icon: '⚠️', title: '危机事件 · 已归档', tag: '已解决',
+    desc: '系统检测到关系异常波动。起因：用户"毛利头子女士"于该时期持续输出无厘头操作，导致用户"杜鑫"满意度骤降至历史低点。\n\n经内部紧急协议，关系于规定时限内完全修复。现已永久归档，标注"已解决，不再提及"。如再提起，本系统将强制清除相关记忆。',
+  },
+  {
+    date: '2026.01.25 — 02.25', icon: '✈️', title: '跨太平洋探访 · 31天记录', tag: '最高分事件',
+    desc: '用户"毛利头子女士"赴美，停留共31天，为本系统记录中迄今最长相处记录。\n\n行程亮点：Mizzou六柱打卡 · Econ Happy Hour（系统备注：全场最清醒，全程可乐）· Red Rocks剧场 · Rocky Mountain国家公园（特别项目：在结冰湖面上行走）· 系里年夜饭（中韩混编战队）· Denver Union Station合影。\n\n2026.02.25 离美。',
+  },
+];
+
+const PEOPLE = [
+  ['镀锌','认证爱人™'],
+  ['dx','异地坚守冠军'],
+  ['dux1n4real','深夜急诊陪同者'],
+  ['活力28','Rocky Mountain 私人向导'],
+  ['野蛮21','深夜情绪价值提供商'],
+  ['球哥','吵架后第一个道歉者'],
+  ['老鑫','青海旅游规划师'],
+  ['老球','pzy frm 项目合作者'],
+  ['老球同学','微信红包发放者'],
+  ['杜鑫','您永远的 No.1 ♡'],
+];
+
+const ACCENTS = ['#FF6B35','#FF3EA5','#7B2FBE','#00BFA5','#FFB300','#E53935','#1565C0','#2E7D32','#FF6B35','#FF3EA5'];
+const BG_DARKS = [
+  'linear-gradient(160deg,#08091a,#14063a)',
+  'linear-gradient(160deg,#0a1628,#041830)',
+  'linear-gradient(160deg,#06061a,#0e0e32)',
+  'linear-gradient(160deg,#140820,#2a0840)',
+  'linear-gradient(160deg,#0a1a0a,#152815)',
+  'linear-gradient(160deg,#141000,#2a2000)',
+  'linear-gradient(160deg,#1a0a20,#300a38)',
+  'linear-gradient(160deg,#1a0806,#301205)',
+  'linear-gradient(160deg,#06061e,#10103a)',
+  'linear-gradient(160deg,#0e080e,#221228)',
+  'linear-gradient(160deg,#060a14,#0a1428)',
+  'linear-gradient(160deg,#140006,#300010)',
+  'linear-gradient(160deg,#080818,#141040)',
+];
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+
+function Confetti() {
+  const items = Array.from({length:40},(_,i)=>({
+    id:i, x:Math.random()*100, delay:Math.random()*1.5,
+    color:['#FF6B35','#FF3EA5','#FFD700','#7B2FBE','#00E676','#FF4444'][i%6],
+    size:6+Math.random()*10,
+  }));
+  return (
+    <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:9999,overflow:'hidden'}}>
+      {items.map(p=>(
+        <div key={p.id} style={{
+          position:'absolute',top:'-20px',left:`${p.x}%`,
+          width:p.size,height:p.size,background:p.color,
+          borderRadius:p.id%3?'50%':'2px',
+          animation:`confetti ${2+Math.random()*2}s ${p.delay}s ease-in forwards`,
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+function ProgressBar({label,delay,onDone}) {
+  const [pct,setPct]=useState(0);
+  const done=pct>=100;
+  useEffect(()=>{
+    const t=setTimeout(()=>{
+      const iv=setInterval(()=>{
+        setPct(p=>{ if(p>=100){clearInterval(iv);if(onDone)onDone();return 100;} return Math.min(100,p+Math.random()*18+4); });
+      },70);
+      return ()=>clearInterval(iv);
+    },delay);
+    return ()=>clearTimeout(t);
+  },[]);
+  return (
+    <div style={{marginBottom:14,opacity:pct>0?1:.3,transition:'opacity .3s'}}>
+      <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'#666',marginBottom:5,fontFamily:'monospace'}}>
+        <span>{label}</span>
+        <span style={{color:done?'#27AE60':'#1A237E'}}>{done?'✓ 完成':`${Math.min(100,Math.round(pct))}%`}</span>
+      </div>
+      <div style={{height:6,background:'#e8e8e8',borderRadius:3,overflow:'hidden'}}>
+        <div style={{height:'100%',width:`${Math.min(100,pct)}%`,background:done?'#27AE60':'linear-gradient(90deg,#1A237E,#C0392B)',borderRadius:3,transition:'width .08s'}}/>
+      </div>
+    </div>
+  );
+}
+
+// ─── OFFICIAL PHASE ──────────────────────────────────────────────────────────
+
+function LoginPage({onLogin}) {
+  const [pwd,setPwd]=useState('');
+  const [err,setErr]=useState('');
+  const [hint,setHint]=useState(false);
+  const [shaking,setShaking]=useState(false);
+  const submit=()=>{
+    if(pwd.toLowerCase()==='pzyaidx'){onLogin();return;}
+    setErr('【错误码 403】访问密码不正确，请重新输入。如多次失败请拨打客服热线 400-PZY-AIDX。');
+    setShaking(true);setTimeout(()=>setShaking(false),500);
+  };
+  return (
+    <div className="official-page">
+      <div style={{textAlign:'center',marginBottom:28}}>
+        <div style={{width:56,height:56,borderRadius:'50%',background:'#C0392B',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,margin:'0 auto 12px',boxShadow:'0 2px 12px rgba(192,57,43,.3)'}}>🔴</div>
+        <div style={{fontSize:11,letterSpacing:3,color:'#999',marginBottom:4}}>中华人民共和国 · 官方认证平台</div>
+        <h1 style={{fontSize:19,fontWeight:900,color:'#1a1a1a',letterSpacing:1,lineHeight:1.5}}>pzyaidx 活动官方平台</h1>
+        <div style={{fontSize:11,color:'#bbb',marginTop:4}}>【特邀用户专属通道 · 请勿转发】</div>
+      </div>
+      <div className="card" style={{animation:shaking?'shake .4s ease':undefined}}>
+        <div style={{fontSize:13,color:'#C0392B',fontWeight:600,marginBottom:18,padding:'10px 14px',background:'#fef0f0',border:'1px solid #fdd',borderRadius:2,lineHeight:1.7}}>
+          ⚠️&nbsp;温馨提示：您已被系统随机抽选为本次活动特邀嘉宾，输入访问密码即可免费参与 <strong>¥200000</strong> 大礼包抽奖，更有机会获得爱宝大礼包！
+        </div>
+        <label style={{display:'block',fontSize:13,color:'#555',marginBottom:8,fontWeight:700}}>
+          访问密码 <span style={{color:'#C0392B'}}>*</span>
+        </label>
+        <input type="password" value={pwd}
+          onChange={e=>{setPwd(e.target.value);setErr('');}}
+          onKeyDown={e=>e.key==='Enter'&&submit()}
+          placeholder="请输入访问密码"
+          style={{width:'100%',height:46,border:`1.5px solid ${err?'#C0392B':'#ddd'}`,borderRadius:2,padding:'0 14px',fontSize:16,letterSpacing:6,marginBottom:8}}
+        />
+        <div onClick={()=>setHint(!hint)} style={{fontSize:12,color:'#1A237E',cursor:'pointer',marginBottom:hint?10:18,textDecoration:'underline'}}>
+          {hint?'▲ 收起提示':'▼ 忘记密码？查看提示'}
+        </div>
+        {hint&&(
+          <div style={{fontSize:13,color:'#555',background:'#f9f9f9',padding:'10px 14px',borderRadius:2,marginBottom:18,border:'1px solid #eee',lineHeight:1.8}}>
+            💡 提示：密码即为本平台网址（去掉 www. 和 .com）
+          </div>
+        )}
+        {err&&<div style={{fontSize:12,color:'#C0392B',marginBottom:16,lineHeight:1.7,padding:'8px 12px',background:'#fef0f0',borderRadius:2}}>{err}</div>}
+        <button onClick={submit} style={{width:'100%',height:50,background:'linear-gradient(135deg,#C0392B,#922B21)',color:'#fff',border:'none',borderRadius:2,fontSize:16,fontWeight:700,letterSpacing:2,boxShadow:'0 2px 10px rgba(192,57,43,.3)'}}>
+          验证身份 · 参与活动
+        </button>
+      </div>
+      <div style={{marginTop:20,fontSize:11,color:'#ccc',textAlign:'center',lineHeight:2}}>
+        活动截止：2025年04月20日 23:59&nbsp;·&nbsp;主办：pzyaidx官方<br/>
+        <span style={{textDecoration:'underline',cursor:'pointer'}}>隐私政策</span>&nbsp;·&nbsp;
+        <span style={{textDecoration:'underline',cursor:'pointer'}}>活动规则</span>&nbsp;·&nbsp;回复 TD 退订
+      </div>
+    </div>
+  );
+}
+
+function VerifyPage({onNext}) {
+  const [step,setStep]=useState(0);
+  useEffect(()=>{ const t=setTimeout(()=>setStep(1),3800); return ()=>clearTimeout(t); },[]);
+  if(step===0) return (
+    <div className="official-page">
+      <div className="card">
+        <div style={{textAlign:'center',marginBottom:24}}>
+          <div style={{fontSize:30,animation:'spin 1s linear infinite',display:'inline-block',marginBottom:10}}>⚙️</div>
+          <h2 style={{fontSize:15,fontWeight:700,color:'#1a1a1a'}}>【系统提示】正在核实用户身份</h2>
+          <p style={{fontSize:11,color:'#aaa',marginTop:4}}>请勿关闭页面，正在加密传输</p>
+        </div>
+        <ProgressBar label="正在扫描用户档案..." delay={0}/>
+        <ProgressBar label="正在核实参与资格..." delay={700}/>
+        <ProgressBar label="正在匹配奖品信息..." delay={1400}/>
+        <ProgressBar label="正在完成安全验证..." delay={2100}/>
+      </div>
+    </div>
+  );
+  return (
+    <div className="official-page">
+      <div className="card" style={{animation:'fadeUp .5s ease'}}>
+        <div style={{textAlign:'center',marginBottom:20}}>
+          <div style={{fontSize:42,marginBottom:8}}>✅</div>
+          <h2 style={{fontSize:15,color:'#27AE60',fontWeight:700}}>身份核实完成</h2>
+        </div>
+        <div style={{background:'#f9f9f9',border:'1px solid #eee',borderRadius:2,padding:'16px 20px',marginBottom:20}}>
+          <div style={{fontSize:10,color:'#bbb',letterSpacing:2,marginBottom:14,textAlign:'center'}}>— 用 户 档 案 —</div>
+          {[['用户姓名','毛利头子女士','#C0392B'],['用户编号','PZY-20230801',''],['身份类型','特邀嘉宾（最高级别）',''],['资格状态','✓ 已通过审核','#27AE60'],['奖品等级','★★★★★ 爱宝大礼包','#FFB300']].map(([k,v,c])=>(
+            <div key={k} style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:13,paddingBottom:10,marginBottom:10,borderBottom:'1px solid #f0f0f0'}}>
+              <span style={{color:'#999'}}>{k}</span>
+              <span style={{fontWeight:700,color:c||'#1a1a1a'}}>{v}</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={onNext} style={{width:'100%',height:50,background:'linear-gradient(135deg,#C0392B,#8B0000)',color:'#fff',border:'none',borderRadius:2,fontSize:16,fontWeight:700,letterSpacing:2,animation:'bounce 1.2s ease infinite'}}>
+          确认身份 · 开始抽奖 🎰
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LotteryPage({onWin}) {
+  const [phase,setPhase]=useState(0);
+  const [num,setNum]=useState(0);
+  const [showConfetti,setShowConfetti]=useState(false);
+  useEffect(()=>{
+    const iv=setInterval(()=>{
+      setNum(n=>{
+        const next=n+Math.floor(Math.random()*99999+20000);
+        if(next>=1200000){clearInterval(iv);setTimeout(()=>{setPhase(1);setShowConfetti(true);setTimeout(()=>setShowConfetti(false),3500);},600);return 1200000;}
+        return next;
+      });
+    },90);
+    return ()=>clearInterval(iv);
+  },[]);
+  if(phase===0) return (
+    <div style={{minHeight:'100dvh',background:'#1A237E',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24,color:'#fff'}}>
+      <div style={{textAlign:'center',marginBottom:40}}>
+        <div style={{fontSize:13,color:'rgba(255,255,255,.5)',letterSpacing:2,marginBottom:8}}>【系统正在随机抽取】</div>
+        <h2 style={{fontSize:22,fontWeight:900}}>正在全国范围内抽取</h2>
+        <p style={{fontSize:12,color:'rgba(255,255,255,.4)',marginTop:6}}>请勿关闭 · 正在扫描 1,200,000 名用户</p>
+      </div>
+      <div style={{width:180,height:180,borderRadius:'50%',border:'2px solid rgba(255,255,255,.15)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative',marginBottom:40}}>
+        <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'3px solid transparent',borderTopColor:'#FFD700',borderRightColor:'#FF6B35',animation:'spin .7s linear infinite'}}/>
+        <div style={{fontSize:12,color:'rgba(255,255,255,.5)',marginBottom:4}}>已扫描</div>
+        <div style={{fontSize:32,fontWeight:900,fontFamily:'monospace',color:'#FFD700',letterSpacing:-1}}>{Math.min(num,1200000).toLocaleString()}</div>
+        <div style={{fontSize:11,color:'rgba(255,255,255,.4)'}}>人</div>
+      </div>
+      <div style={{fontSize:12,color:'rgba(255,255,255,.4)',animation:'pulse 1.2s ease infinite'}}>▶ 正在比对特邀名单...</div>
+    </div>
+  );
+  return (
+    <div style={{minHeight:'100dvh',background:'linear-gradient(160deg,#0d0d1a,#1A237E)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24,color:'#fff'}}>
+      {showConfetti&&<Confetti/>}
+      <div style={{textAlign:'center',animation:'fadeUp .6s ease'}}>
+        <div style={{fontSize:64,marginBottom:16,animation:'popIn .8s ease'}}>🎉</div>
+        <div style={{fontSize:13,color:'#FFD700',letterSpacing:2,marginBottom:8}}>【重要通知 · 请截图保存】</div>
+        <h2 style={{fontSize:30,fontWeight:900,lineHeight:1.4,marginBottom:12}}>恭喜您！<br/>中奖了！</h2>
+        <p style={{fontSize:13,color:'rgba(255,255,255,.5)',marginBottom:28,lineHeight:1.8}}>
+          经系统核实，本次抽奖结果<br/>
+          <strong style={{color:'#FF6B35'}}>完全不随机</strong>，全程人工指定 ✓
+        </p>
+        <div style={{background:'rgba(255,255,255,.08)',backdropFilter:'blur(12px)',borderRadius:12,padding:'24px 32px',marginBottom:32,border:'1px solid rgba(255,255,255,.1)'}}>
+          <div style={{fontSize:12,color:'rgba(255,255,255,.4)',marginBottom:6}}>您已获得</div>
+          <div style={{fontSize:44,fontWeight:900,color:'#FFD700',lineHeight:1,marginBottom:4}}>¥200000</div>
+          <div style={{fontSize:11,color:'rgba(255,255,255,.3)',marginBottom:16}}>（两千元整 · 含两位小数及两个前置零）</div>
+          <div style={{fontSize:16,fontWeight:700,color:'#FF6B35'}}>+ 爱宝大礼包 🎁</div>
+        </div>
+        <button onClick={onWin} style={{padding:'16px 44px',background:'linear-gradient(135deg,#FF6B35,#FF3EA5)',color:'#fff',border:'none',borderRadius:40,fontSize:18,fontWeight:700,letterSpacing:1,boxShadow:'0 4px 24px rgba(255,107,53,.5)',animation:'glow 2s ease infinite'}}>
+          查收大礼包 →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── WRAPPED SLIDES ──────────────────────────────────────────────────────────
+
+function SlideIntro() {
+  return (
+    <div style={{textAlign:'center',padding:'0 32px',position:'relative'}}>
+      <div style={{fontSize:11,letterSpacing:3,color:'rgba(255,255,255,.4)',marginBottom:16,animation:'fadeIn 1s ease .2s both'}}>
+        pzyaidx 系统 · 年度恋爱报告
+      </div>
+      <div style={{fontSize:48,marginBottom:16,animation:'popIn .8s ease .4s both'}}>💌</div>
+      <h2 style={{fontSize:15,color:'rgba(255,255,255,.5)',fontWeight:400,marginBottom:12,animation:'fadeUp .8s ease .6s both',lineHeight:2,letterSpacing:1}}>系统检测到</h2>
+      <h1 style={{fontSize:30,fontWeight:900,color:'#fff',lineHeight:1.4,marginBottom:12,animation:'fadeUp .8s ease .8s both'}}>
+        一段数据<br/><span style={{color:'#FF6B35'}}>异常珍贵</span><br/>的关系
+      </h1>
+      <div style={{fontSize:14,color:'rgba(255,255,255,.6)',marginTop:20,animation:'fadeUp .8s ease 1s both',lineHeight:1.8}}>
+        毛利头子女士<br/>您的恋爱年度报告<br/>已生成完毕
+      </div>
+    </div>
+  );
+}
+
+function SlideStats() {
+  const stats=[
+    {num:'993',unit:'天',label:'在一起的日子'},
+    {num:'31',unit:'天',label:'最长连续相处（来美那次）'},
+    {num:'10,000+',unit:'km',label:'异地跨越的距离'},
+    {num:'∞',unit:'',label:'吵架后依然在一起'},
+  ];
+  return (
+    <div style={{padding:'0 28px',width:'100%',maxWidth:480}}>
+      <div style={{fontSize:11,letterSpacing:3,color:'rgba(255,255,255,.4)',marginBottom:8,textAlign:'center',animation:'fadeIn .6s ease'}}>2023.08.01 → 2026.04.20</div>
+      <h1 style={{fontSize:26,fontWeight:900,color:'#fff',textAlign:'center',marginBottom:28,animation:'fadeUp .6s ease .2s both'}}>
+        您们的<span style={{color:'#FF3EA5'}}> 数据报告</span>
+      </h1>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+        {stats.map((s,i)=>(
+          <div key={i} style={{background:'rgba(255,255,255,.07)',borderRadius:12,padding:'18px 14px',animation:`popIn .6s ease ${.3+i*.15}s both`}}>
+            <div style={{fontSize:34,fontWeight:900,color:ACCENTS[i],lineHeight:1}}>{s.num}<span style={{fontSize:14}}>{s.unit}</span></div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,.5)',marginTop:6,lineHeight:1.5}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SlideEventTitle() {
+  return (
+    <div style={{textAlign:'center',padding:'0 32px'}}>
+      <div style={{fontSize:64,animation:'popIn .8s ease',marginBottom:20}}>📋</div>
+      <div style={{fontSize:11,letterSpacing:3,color:'rgba(255,255,255,.4)',marginBottom:12,animation:'fadeIn .6s ease .3s both'}}>系统档案 · 已认证</div>
+      <h1 style={{fontSize:34,fontWeight:900,color:'#fff',lineHeight:1.4,animation:'fadeUp .7s ease .4s both'}}>
+        恋爱<br/><span style={{color:'#FFB300'}}>大事件</span>
+      </h1>
+      <p style={{fontSize:13,color:'rgba(255,255,255,.5)',marginTop:16,lineHeight:2,animation:'fadeUp .7s ease .6s both'}}>
+        经系统大数据分析<br/>以下时刻被评定为<br/><strong style={{color:'rgba(255,255,255,.8)'}}>影响深远的历史性时刻</strong>
+      </p>
+    </div>
+  );
+}
+
+function SlideEvent({ev, num, total}) {
+  const tagColors={'不可撤销':'#E53935','典型案例':'#00BFA5','高优先级':'#FF6B35','已解决':'#888','今日发生':'#FF3EA5','里程碑':'#7B2FBE','最高分事件':'#FFB300'};
+  const lines = ev.desc.split('\n\n');
+  return (
+    <div style={{padding:'0 24px',width:'100%',maxWidth:480,overflowY:'auto',maxHeight:'calc(100dvh - 120px)'}}>
+      <div style={{fontSize:11,color:'rgba(255,255,255,.3)',letterSpacing:2,marginBottom:16,textAlign:'center',animation:'fadeIn .5s ease'}}>
+        事件 {String(num).padStart(2,'0')} / {String(total).padStart(2,'0')}
+      </div>
+      <div style={{background:'rgba(255,255,255,.06)',borderRadius:16,padding:'24px 20px',border:'1px solid rgba(255,255,255,.08)',animation:'fadeUp .6s ease .2s both'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+          <span style={{fontSize:11,fontFamily:'monospace',color:'rgba(255,255,255,.4)',letterSpacing:1,flex:1}}>{ev.date}</span>
+          <span style={{fontSize:10,padding:'3px 8px',borderRadius:20,background:tagColors[ev.tag]||'#555',color:'#fff',fontWeight:700,letterSpacing:.5,flexShrink:0,marginLeft:8}}>{ev.tag}</span>
+        </div>
+        <div style={{fontSize:32,marginBottom:12,animation:'popIn .6s ease .3s both'}}>{ev.icon}</div>
+        <h2 style={{fontSize:18,fontWeight:900,color:'#fff',marginBottom:14,lineHeight:1.4,animation:'fadeUp .6s ease .35s both'}}>{ev.title}</h2>
+        {lines.map((line,i)=>(
+          <p key={i} style={{fontSize:13,color:'rgba(255,255,255,.65)',lineHeight:1.9,marginBottom:i<lines.length-1?12:0,animation:`fadeUp .6s ease ${.45+i*.1}s both`,fontFamily:'Noto Sans SC,sans-serif',fontWeight:400,whiteSpace:'pre-line'}}>{line}</p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SlidePhoto({src, caption, sub}) {
+  return (
+    <div style={{position:'relative',width:'100%',height:'100%',display:'flex',alignItems:'flex-end',justifyContent:'center'}}>
+      <img src={src} alt="照片" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center top'}}/>
+      <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(0,0,0,.85) 0%,rgba(0,0,0,.2) 50%,transparent 100%)'}}/>
+      <div style={{position:'relative',zIndex:1,padding:'0 28px 72px',textAlign:'center',animation:'fadeUp .8s ease .3s both'}}>
+        {sub&&<div style={{fontSize:11,letterSpacing:3,color:'rgba(255,255,255,.5)',marginBottom:10}}>{sub}</div>}
+        <h2 style={{fontSize:22,fontWeight:900,color:'#fff',lineHeight:1.5,marginBottom:8}}>{caption}</h2>
+      </div>
+    </div>
+  );
+}
+
+function SlidePhotoPair({photos, caption, date}) {
+  return (
+    <div style={{padding:'0 20px',width:'100%',maxWidth:480,textAlign:'center'}}>
+      {date&&<div style={{fontSize:11,letterSpacing:3,color:'rgba(255,255,255,.4)',marginBottom:12,animation:'fadeIn .5s ease'}}>{date}</div>}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
+        {photos.map((src,i)=>(
+          <div key={i} style={{borderRadius:12,overflow:'hidden',aspectRatio:'3/4',animation:`popIn .6s ease ${.2+i*.15}s both`}}>
+            <img src={src} alt="" style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center top'}}/>
+          </div>
+        ))}
+      </div>
+      {caption&&<p style={{fontSize:14,color:'rgba(255,255,255,.75)',lineHeight:1.8,animation:'fadeUp .6s ease .5s both',fontFamily:'Noto Sans SC,sans-serif'}}>{caption}</p>}
+    </div>
+  );
+}
+
+function SlidePhotoPlaceholder({label, hint}) {
+  return (
+    <div style={{textAlign:'center',padding:'0 32px'}}>
+      <div style={{width:100,height:100,borderRadius:'50%',background:'rgba(255,255,255,.07)',border:'2px dashed rgba(255,255,255,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:36,margin:'0 auto 20px',animation:'fadeIn .6s ease'}}>
+        📷
+      </div>
+      <div style={{fontSize:11,letterSpacing:3,color:'rgba(255,255,255,.3)',marginBottom:8,animation:'fadeIn .6s ease .2s both'}}>照片即将上传</div>
+      <h2 style={{fontSize:22,fontWeight:900,color:'rgba(255,255,255,.6)',animation:'fadeUp .6s ease .3s both'}}>{label}</h2>
+      {hint&&<p style={{fontSize:12,color:'rgba(255,255,255,.3)',marginTop:12,lineHeight:1.8,animation:'fadeUp .6s ease .4s both'}}>{hint}</p>}
+    </div>
+  );
+}
+
+function SlidePeople({revealed}) {
+  const colors=['#FF6B35','#FF3EA5','#7B2FBE','#00BFA5','#FFB300','#E53935','#1565C0','#2E7D32','#FF6B35','#FF3EA5'];
+  return (
+    <div style={{padding:'0 20px',width:'100%',maxWidth:480}}>
+      <div style={{textAlign:'center',marginBottom:16}}>
+        <div style={{fontSize:11,letterSpacing:3,color:'rgba(255,255,255,.4)',marginBottom:6,animation:'fadeIn .5s ease'}}>系统大数据分析结果</div>
+        <h1 style={{fontSize:20,fontWeight:900,color:'#fff',animation:'fadeUp .6s ease .2s both'}}>
+          您的年度<span style={{color:'#FF3EA5'}}> TOP 10 </span>最喜欢的人
+        </h1>
+        {revealed===0&&<p style={{fontSize:12,color:'rgba(255,255,255,.3)',marginTop:8,animation:'pulse 1.5s ease infinite'}}>点击右箭头逐一揭晓...</p>}
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:7}}>
+        {PEOPLE.slice(0,revealed).map(([name,title],i)=>(
+          <div key={i} style={{display:'flex',alignItems:'center',gap:12,background:'rgba(255,255,255,.06)',borderRadius:10,padding:'9px 14px',animation:'waveIn .4s ease both'}}>
+            <span style={{fontSize:13,fontWeight:900,color:colors[i],minWidth:22,fontFamily:'monospace'}}>{String(i+1).padStart(2,'0')}</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,fontWeight:700,color:'#fff'}}>{name}</div>
+              <div style={{fontSize:10,color:'rgba(255,255,255,.4)',marginTop:1}}>{title}</div>
+            </div>
+            <span style={{fontSize:14}}>{i===9?'👑':'⭐'}</span>
+          </div>
+        ))}
+        {revealed<10&&revealed>0&&(
+          <div style={{textAlign:'center',fontSize:11,color:'rgba(255,255,255,.25)',padding:'6px 0',animation:'pulse 1.5s ease infinite'}}>还有 {10-revealed} 位 · 点击 → 继续</div>
+        )}
+        {revealed===10&&(
+          <div style={{textAlign:'center',fontSize:11,color:'rgba(255,255,255,.35)',padding:'6px 0',animation:'fadeIn .5s ease'}}>以上结果均由系统独立运算，与人工干预无关 ✓</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SlideDistance() {
+  const pathD = "M 292 125 Q 178 8 62 90";
+  return (
+    <div style={{padding:'0 20px',width:'100%',maxWidth:480,textAlign:'center'}}>
+      <div style={{fontSize:11,letterSpacing:3,color:'rgba(255,255,255,.4)',marginBottom:4,animation:'fadeIn .6s ease'}}>
+        系统实时测量
+      </div>
+      <div style={{fontSize:13,color:'rgba(255,255,255,.3)',marginBottom:14,animation:'fadeIn .6s ease .2s both'}}>
+        长沙 → Columbia, MO
+      </div>
+
+      {/* Flight map */}
+      <svg viewBox="0 0 360 200" style={{width:'100%',maxWidth:380,display:'block',margin:'0 auto 4px'}}>
+        <defs>
+          <path id="fp" d={pathD}/>
+          <radialGradient id="gCS" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#FF6B35" stopOpacity=".6"/>
+            <stop offset="100%" stopColor="#FF6B35" stopOpacity="0"/>
+          </radialGradient>
+          <radialGradient id="gCO" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#FF3EA5" stopOpacity=".6"/>
+            <stop offset="100%" stopColor="#FF3EA5" stopOpacity="0"/>
+          </radialGradient>
+        </defs>
+
+        {/* Grid */}
+        {[50,100,150].map(y=>(
+          <line key={y} x1="0" y1={y} x2="360" y2={y} stroke="rgba(255,255,255,.05)" strokeWidth="1"/>
+        ))}
+        {[72,144,216,288].map(x=>(
+          <line key={x} x1={x} y1="0" x2={x} y2="200" stroke="rgba(255,255,255,.05)" strokeWidth="1"/>
+        ))}
+
+        {/* Rough continent blobs */}
+        {/* North America (left) */}
+        <path d="M 0,45 L 25,30 L 70,25 L 105,45 L 110,80 L 100,150 L 75,175 L 40,178 L 10,160 L 0,130 Z"
+          fill="rgba(120,140,180,.1)" stroke="rgba(150,170,210,.12)" strokeWidth="1"/>
+        {/* Asia/China (right) */}
+        <path d="M 245,45 L 310,30 L 358,38 L 360,80 L 355,175 L 305,188 L 258,170 L 238,130 L 232,85 Z"
+          fill="rgba(120,140,180,.1)" stroke="rgba(150,170,210,.12)" strokeWidth="1"/>
+        {/* Small label: Pacific */}
+        <text x="178" y="165" textAnchor="middle" fill="rgba(255,255,255,.07)" fontSize="10" fontFamily="serif" letterSpacing="3">P A C I F I C</text>
+
+        {/* Dashed guide path */}
+        <path d={pathD} fill="none" stroke="rgba(255,107,53,.2)" strokeWidth="1.5" strokeDasharray="5,5"/>
+
+        {/* Animated drawn path */}
+        <path d={pathD} fill="none" stroke="rgba(255,107,53,.85)" strokeWidth="2.5"
+          strokeDasharray="420" strokeLinecap="round"
+          style={{animation:'drawPath 2.8s ease .4s forwards',strokeDashoffset:420}}/>
+
+        {/* Changsha */}
+        <ellipse cx="292" cy="125" rx="16" ry="16" fill="url(#gCS)"/>
+        <circle cx="292" cy="125" r="5" fill="#FF6B35"/>
+        <circle cx="292" cy="125" r="5" fill="none" stroke="#FF6B35" strokeWidth="1.5" style={{animation:'pulse 2s ease infinite'}}/>
+        <text x="292" y="145" textAnchor="middle" fill="rgba(255,255,255,.75)" fontSize="10" fontFamily="Noto Sans SC,sans-serif">长沙</text>
+
+        {/* Columbia MO */}
+        <ellipse cx="62" cy="90" rx="16" ry="16" fill="url(#gCO)"/>
+        <circle cx="62" cy="90" r="5" fill="#FF3EA5"/>
+        <circle cx="62" cy="90" r="5" fill="none" stroke="#FF3EA5" strokeWidth="1.5" style={{animation:'pulse 2s ease .4s infinite'}}/>
+        <text x="62" y="110" textAnchor="middle" fill="rgba(255,255,255,.75)" fontSize="9" fontFamily="Noto Sans SC,sans-serif">Columbia, MO</text>
+
+        {/* Animated plane */}
+        <text fontSize="15" textAnchor="middle" dominantBaseline="middle" fill="white">
+          ✈
+          <animateMotion dur="5s" repeatCount="indefinite" rotate="auto">
+            <mpath xlinkHref="#fp"/>
+          </animateMotion>
+        </text>
+      </svg>
+
+      {/* Distance number */}
+      <div style={{fontSize:52,fontWeight:900,color:'#FF6B35',lineHeight:1,marginTop:8,animation:'popIn .8s ease .6s both',letterSpacing:-2}}>
+        12,862<span style={{fontSize:18,fontWeight:600,letterSpacing:0}}>km</span>
+      </div>
+
+      {/* Message */}
+      <p style={{fontSize:15,color:'rgba(255,255,255,.7)',marginTop:10,lineHeight:1.9,animation:'fadeUp .6s ease 1s both'}}>
+        这段距离<br/>
+        <span style={{color:'#FF3EA5',fontWeight:900,fontSize:20}}>挡不住想见你</span>
+      </p>
+    </div>
+  );
+}
+
+function SlideGraduation() {
+  return (
+    <div style={{padding:'0 20px',width:'100%',maxWidth:480}}>
+      <div style={{fontSize:11,letterSpacing:3,color:'rgba(255,255,255,.4)',marginBottom:12,textAlign:'center',animation:'fadeIn .5s ease'}}>
+        2025年6月 · 硕士毕业
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gridTemplateRows:'auto auto',gap:8,animation:'fadeUp .6s ease .2s both'}}>
+        {/* Group photo - right column, spans 2 rows */}
+        <div style={{gridColumn:'2',gridRow:'1/3',borderRadius:12,overflow:'hidden',aspectRatio:'2/3'}}>
+          <img src="photo_grad2.jpg" alt="" style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center top'}}/>
+        </div>
+        {/* Caption card - left column top */}
+        <div style={{gridColumn:'1',gridRow:'1',borderRadius:12,background:'rgba(255,255,255,.07)',padding:'14px 12px',display:'flex',flexDirection:'column',justifyContent:'center'}}>
+          <div style={{fontSize:15,fontWeight:900,color:'#fff',lineHeight:1.4,marginBottom:6}}>学业毕业</div>
+          <div style={{fontSize:13,fontWeight:900,color:'#FF3EA5',lineHeight:1.4,marginBottom:6}}>感情没毕业</div>
+          <div style={{fontSize:10,color:'rgba(255,255,255,.35)',lineHeight:1.6}}>系统评定：<br/>此段关系GPA 4.0</div>
+        </div>
+        {/* Couple selfie - left column bottom */}
+        <div style={{gridColumn:'1',gridRow:'2',borderRadius:12,overflow:'hidden',aspectRatio:'2/3'}}>
+          <img src="photo_grad1.jpg" alt="" style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center top'}}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SlideRoast() {
+  return (
+    <div style={{padding:'0 24px',width:'100%',maxWidth:480}}>
+      <div style={{fontSize:11,color:'rgba(255,255,255,.3)',letterSpacing:2,marginBottom:16,textAlign:'center',animation:'fadeIn .5s ease'}}>
+        彩蛋事件 · 系统自动收录
+      </div>
+      <div style={{background:'rgba(255,255,255,.06)',borderRadius:16,border:'1px solid rgba(255,255,255,.08)',overflow:'hidden',animation:'fadeUp .6s ease .2s both'}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,aspectRatio:'2/1.3',overflow:'hidden',position:'relative'}}>
+          <div style={{overflow:'hidden',borderRadius:'0'}}>
+            <img src="photo_roast.jpg" alt="" style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center top'}}/>
+          </div>
+          <div style={{overflow:'hidden'}}>
+            <img src="photo_roast2.jpg" alt="" style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center'}}/>
+          </div>
+        </div>
+        <div style={{padding:'20px 20px 22px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+            <span style={{fontSize:11,fontFamily:'monospace',color:'rgba(255,255,255,.4)',letterSpacing:1}}>2024年5月</span>
+            <span style={{fontSize:10,padding:'3px 8px',borderRadius:20,background:'#FF6B35',color:'#fff',fontWeight:700,letterSpacing:.5}}>彩蛋</span>
+          </div>
+          <div style={{fontSize:28,marginBottom:10}}>🐷</div>
+          <h2 style={{fontSize:18,fontWeight:900,color:'#fff',marginBottom:12,lineHeight:1.4}}>毛利头子体征数据异常</h2>
+          <p style={{fontSize:13,color:'rgba(255,255,255,.65)',lineHeight:1.9,fontFamily:'Noto Sans SC,sans-serif',fontWeight:400}}>
+            经系统自动扫描，检测到用户"毛利头子女士"体重数据异常偏高。本条记录由用户"杜鑫"亲自提交并归档，不可删除。<br/><br/>
+            系统附注：<strong style={{color:'rgba(255,255,255,.85)'}}>毛利头子好肥，嘻嘻😁</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SlideRedPacket() {
+  const [opened,setOpened]=useState(false);
+  return (
+    <div style={{textAlign:'center',padding:'0 32px'}} onClick={e=>{e.stopPropagation();if(!opened)setOpened(true);}}>
+      {!opened?(
+        <div style={{animation:'fadeUp .6s ease'}}>
+          <div style={{fontSize:13,color:'rgba(255,255,255,.4)',letterSpacing:2,marginBottom:20}}>年度报告已完成 · 最后一项</div>
+          <div style={{width:160,height:220,margin:'0 auto 24px',background:'linear-gradient(160deg,#E53935,#B71C1C)',borderRadius:16,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 40px rgba(229,57,53,.4)',border:'1px solid rgba(255,255,255,.15)',cursor:'pointer',animation:'glow 2s ease infinite'}}>
+            <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(255,200,0,.2)',border:'2px solid rgba(255,200,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,marginBottom:10}}>💰</div>
+            <div style={{fontSize:13,color:'rgba(255,255,255,.8)',fontWeight:700}}>微信红包</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,.5)',marginTop:3}}>点击拆开</div>
+          </div>
+          <p style={{fontSize:13,color:'rgba(255,255,255,.5)',lineHeight:1.8}}>恭喜获得<br/><strong style={{color:'#FFD700',fontSize:15}}>爱宝大礼包 · 压轴彩蛋</strong></p>
+        </div>
+      ):(
+        <div style={{animation:'popIn .6s ease'}}>
+          <Confetti/>
+          <div style={{fontSize:44,marginBottom:14}}>🧧</div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,.4)',marginBottom:8}}>杜鑫 发来红包</div>
+          <div style={{fontSize:52,fontWeight:900,color:'#FFD700',letterSpacing:-2,marginBottom:4}}>¥2000</div>
+          <div style={{fontSize:11,color:'rgba(255,255,255,.3)',marginBottom:24}}>(即 ¥200000 · 含两位小数及两个幸运零)</div>
+          <div style={{background:'rgba(255,255,255,.07)',borderRadius:14,padding:'20px 22px',marginBottom:20,border:'1px solid rgba(255,255,255,.1)',textAlign:'left'}}>
+            <p style={{fontSize:14,color:'rgba(255,255,255,.85)',lineHeight:2.1,fontFamily:'Noto Sans SC,sans-serif',fontWeight:400}}>
+              毛利头子女士：<br/>
+              生日快乐。<br/>
+              虽然隔着 10000 公里，<br/>但你知道我在想你。<br/>
+              感谢你在我身边，<br/>感谢你飞来找我，<br/>你个急头子。<br/><br/>
+              <span style={{color:'#FF6B35',fontWeight:700}}>❤️ 杜鑫</span>
+            </p>
+          </div>
+          <div style={{fontSize:11,color:'rgba(255,255,255,.25)',lineHeight:1.8}}>年度报告已观看完毕<br/>请联系工作人员领取红包 😉</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── WRAPPED CONTROLLER ──────────────────────────────────────────────────────
+
+function WrappedSection() {
+  const PEOPLE_SLIDE = 13; // index of people slide
+  const TOTAL = 17;
+
+  const [idx,setIdx]=useState(()=>{ try{return parseInt(localStorage.getItem('w_idx'))||0;}catch{return 0;} });
+  const [revealed,setRevealed]=useState(0);
+  const [anim,setAnim]=useState(true);
+  const touchStart=useRef(null);
+
+  useEffect(()=>{ try{localStorage.setItem('w_idx',idx);}catch{} },[idx]);
+
+  const gotoSlide=useCallback((target)=>{
+    if(target<0||target>=TOTAL)return;
+    setAnim(false);
+    setTimeout(()=>{ setIdx(target); setRevealed(0); setAnim(true); },240);
+  },[]);
+
+  const next=useCallback(()=>{
+    if(idx===PEOPLE_SLIDE&&revealed<10){ setRevealed(r=>r+1); return; }
+    gotoSlide(idx+1);
+  },[idx,revealed,gotoSlide]);
+
+  const prev=useCallback(()=>{
+    gotoSlide(idx-1);
+  },[idx,gotoSlide]);
+
+  const handleTouchStart=e=>{ touchStart.current=e.touches[0].clientX; };
+  const handleTouchEnd=e=>{
+    if(touchStart.current===null)return;
+    const diff=touchStart.current-e.changedTouches[0].clientX;
+    if(Math.abs(diff)>50){ diff>0?next():prev(); }
+    touchStart.current=null;
+  };
+
+  // Tap on slide body = next (excluding nav buttons)
+  const handleTap=e=>{
+    if(e.target.closest('.nav-btn'))return;
+    next();
+  };
+
+  const slides=[
+    <SlideIntro/>,                                             // 0
+    <SlideStats/>,                                             // 1
+    <SlideEventTitle/>,                                        // 2
+    <SlideEvent ev={EVENTS[0]} num={1} total={5}/>,            // 3
+    <SlidePhotoPair photos={['photo_together1.jpg','photo_together2.jpg']} date="2023.08.01" caption="从这天起，系统正式记录在册\n研究生工位 · 在一起第一天"/>, // 4
+    <SlideEvent ev={EVENTS[1]} num={2} total={5}/>,            // 5
+    <SlidePhotoPair photos={['photo_qh4.jpg','photo_qh1.jpg']} date="2023.08.31 · 兰州" caption="落地第一天 · 机场高铁 + 按摩放松"/>, // 6
+    <SlidePhotoPair photos={['photo_qh2.jpg','photo_qh3.jpg']} date="2023.09 · 青海" caption="草原蓝天 · 茶卡盐湖日落\n幸福指数超出量程"/>, // 7
+    <SlideRoast/>,                                             // 8
+    <SlidePhoto src="photo_bday2025.jpg" sub="2025.04.19" caption={"去年今天"}/>, // 9
+    <SlideEvent ev={EVENTS[2]} num={3} total={5}/>,            // 10
+    <SlideGraduation/>,                                        // 11
+    <SlideEvent ev={EVENTS[3]} num={4} total={5}/>,            // 12
+    <SlidePeople revealed={revealed}/>,                        // 13
+    <SlideEvent ev={EVENTS[4]} num={5} total={5}/>,            // 14
+    <SlideDistance/>,                                          // 15
+    <SlideRedPacket/>,                                         // 16
+  ];
+
+  return (
+    <div
+      className="wrapped-page"
+      style={{background:BG_DARKS[idx]||BG_DARKS[0]}}
+      onClick={handleTap}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Progress dots */}
+      <div style={{position:'absolute',top:18,left:0,right:0,display:'flex',justifyContent:'center',gap:4,zIndex:10,padding:'0 60px'}}>
+        {Array.from({length:TOTAL}).map((_,i)=>(
+          <div key={i} style={{flex:i===idx?2:1,height:3,borderRadius:2,background:i<=idx?'rgba(255,255,255,.8)':'rgba(255,255,255,.2)',transition:'all .3s ease'}}/>
+        ))}
+      </div>
+
+      {/* Slide content */}
+      <div style={{
+        width:'100%',maxWidth:480,flex:1,
+        display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+        paddingTop:44,paddingBottom:80,
+        opacity:anim?1:0,transform:anim?'translateY(0)':'translateY(12px)',
+        transition:'opacity .24s ease, transform .24s ease',
+      }}>
+        {slides[idx]}
+      </div>
+
+      {/* Nav buttons */}
+      {idx>0&&(
+        <button className="nav-btn left" onClick={e=>{e.stopPropagation();prev();}}>←</button>
+      )}
+      {idx<TOTAL-1&&(
+        <button className="nav-btn right" onClick={e=>{e.stopPropagation();next();}}>→</button>
+      )}
+    </div>
+  );
+}
+
+// ─── APP ─────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [phase,setPhase]=useState(()=>{ try{return localStorage.getItem('phase')||'login';}catch{return 'login';} });
+  const go=p=>{ try{localStorage.setItem('phase',p);}catch{} setPhase(p); };
+  if(phase==='login')   return <LoginPage   onLogin={()=>go('verify')}/>;
+  if(phase==='verify')  return <VerifyPage  onNext={()=>go('lottery')}/>;
+  if(phase==='lottery') return <LotteryPage onWin={()=>go('wrapped')}/>;
+  return <WrappedSection/>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
